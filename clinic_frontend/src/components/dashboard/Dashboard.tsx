@@ -44,6 +44,13 @@ export const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+
+  // Redirect LAB_TECHNICIAN to laboratory module
+  useEffect(() => {
+    if (user?.role === ROLES.LAB_TECHNICIAN) {
+      navigate('/laboratory', { replace: true });
+    }
+  }, [user, navigate]);
   const [stats, setStats] = useState({
     patients: 0,
     doctors: 0,

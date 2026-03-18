@@ -10,7 +10,7 @@ export interface Appointment {
   appointment_date: string;
   appointment_time: string;
   reason: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'COMPLETED';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'COMPLETED' | 'VISITED';
   notes?: string;
   has_prescription?: boolean;
   prescription_id?: number | null;

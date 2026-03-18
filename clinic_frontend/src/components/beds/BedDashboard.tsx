@@ -14,16 +14,25 @@ export const BedDashboard = () => {
     const { data: wards, isLoading: wardsLoading } = useQuery({
         queryKey: ['wards'],
         queryFn: bedService.getWards,
+        staleTime: 60_000,
+        gcTime: 5 * 60_000,
+        refetchOnWindowFocus: false,
     });
 
     const { data: beds, isLoading: bedsLoading } = useQuery({
         queryKey: ['beds'],
         queryFn: () => bedService.getBeds(),
+        staleTime: 60_000,
+        gcTime: 5 * 60_000,
+        refetchOnWindowFocus: false,
     });
 
     const { data: requests } = useQuery({
         queryKey: ['bed-requests'],
         queryFn: bedService.getBedRequests,
+        staleTime: 30_000,
+        gcTime: 5 * 60_000,
+        refetchOnWindowFocus: false,
     });
 
     const pendingRequestsCount = requests?.filter((r: any) => r.status === 'PENDING').length || 0;

@@ -49,6 +49,11 @@ export const patientService = {
     return extractResults(response.data);
   },
 
+  async searchPatients(params: { search?: string }): Promise<{ results: Patient[] } | Patient[]> {
+    const response = await api.get('/patients/', { params });
+    return response.data;
+  },
+
   async getById(id: number): Promise<Patient> {
     const response = await api.get(`/patients/${id}/`);
     return response.data;

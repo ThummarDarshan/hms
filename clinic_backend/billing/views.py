@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Prefetch, Q
 from .models import Billing
-from .serializers import BillingSerializer
+from .serializers import BillingSerializer, BillingListSerializer
 from appointments.models import Appointment
 from accounts.permissions import IsAdminOrStaff
 from support.models import Notification
@@ -18,6 +18,11 @@ from decimal import Decimal
 class BillingViewSet(viewsets.ModelViewSet):
     serializer_class = BillingSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return BillingListSerializer
+        return BillingSerializer
     
     def get_queryset(self):
         user = self.request.user
@@ -106,7 +111,24 @@ class BillingViewSet(viewsets.ModelViewSet):
             print(f"Error calculating bed charges: {e}")
             pass
 
-        gross_amount = float(doctor_fee) + hospital_charge + bed_charge
+        # Calculate lab charges for completed lab tests
+        # Sum LabTestType.price for all completed lab requests
+        lab_charge = 0
+        try:
+            from laboratory.models import LabRequest, LabTestType
+            completed_lab_tests = LabRequest.objects.filter(
+                patient=appointment.patient,
+                status='COMPLETED'
+            ).select_related('test')
+            
+            for lab_request in completed_lab_tests:
+                if lab_request.test and lab_request.test.price:
+                    lab_charge += float(lab_request.test.price)
+        except Exception as e:
+            print(f"Error calculating lab charges: {e}")
+            lab_charge = 0
+
+        gross_amount = float(doctor_fee) + hospital_charge + bed_charge + lab_charge
         
         discount_percentage = 0
         discount_amount = 0
@@ -153,6 +175,7 @@ class BillingViewSet(viewsets.ModelViewSet):
             'bed_charge': bed_charge,
             'bed_days': bed_days,
             'bed_charge_per_day': bed_charge_per_day,
+            'lab_charge': lab_charge,
             'gross_amount': gross_amount,
             'case_type': appointment.case_type,
             'discount_percentage': discount_percentage,
@@ -233,7 +256,24 @@ class BillingViewSet(viewsets.ModelViewSet):
             print(f"Error calculating bed charges in creation: {e}")
             pass
 
-        gross_amount = float(doctor_fee) + hospital_charge + bed_charge
+        # Calculate lab charges for completed lab tests
+        # Sum LabTestType.price for all completed lab requests
+        lab_charge = 0
+        try:
+            from laboratory.models import LabRequest, LabTestType
+            completed_lab_tests = LabRequest.objects.filter(
+                patient=appointment.patient,
+                status='COMPLETED'
+            ).select_related('test')
+            
+            for lab_request in completed_lab_tests:
+                if lab_request.test and lab_request.test.price:
+                    lab_charge += float(lab_request.test.price)
+        except Exception as e:
+            print(f"Error calculating lab charges in creation: {e}")
+            lab_charge = 0
+
+        gross_amount = float(doctor_fee) + hospital_charge + bed_charge + lab_charge
         
         discount_percentage = 0
         discount_amount = 0
@@ -285,6 +325,7 @@ class BillingViewSet(viewsets.ModelViewSet):
             bed_charge=bed_charge,
             bed_days=bed_days,
             bed_charge_per_day=bed_charge_per_day,
+            lab_charge=lab_charge,
             discount_percentage=discount_percentage,
             discount_amount=discount_amount,
             final_amount=final_amount,

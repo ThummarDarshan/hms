@@ -17,9 +17,13 @@ import { useAuth } from '@/context/AuthContext';
 import { PageLoader } from '@/components/common/Loader';
 import { ConfirmModal } from '@/components/common/Modal';
 import { patientService, Patient } from '@/services/patientService';
+import { laboratoryService, LabReport } from '@/services/laboratoryService';
 import { calculateAge, formatDate, getInitials } from '@/utils/helpers';
 import { ROLES, GENDERS } from '@/utils/constants';
 import { toast } from '@/hooks/use-toast';
+import { DownloadCloud, FlaskConical } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 export const PatientDetail = () => {
     const { id } = useParams();
@@ -29,13 +33,21 @@ export const PatientDetail = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [labReports, setLabReports] = useState<LabReport[]>([]);
+    const [loadingReports, setLoadingReports] = useState(false);
 
     useEffect(() => {
-        const fetchPatient = async () => {
+        const fetchPatientAndReports = async () => {
             if (!id) return;
             try {
                 const data = await patientService.getById(parseInt(id));
                 setPatient(data);
+
+                setLoadingReports(true);
+                const reportsData = await laboratoryService.getReports();
+                // Alternatively you could fetch with query param backend
+                const filtered = reportsData.filter((r: any) => r.lab_request_details?.patient === parseInt(id));
+                setLabReports(filtered);
             } catch (error) {
                 console.error('Failed to fetch patient:', error);
                 toast({
@@ -46,10 +58,11 @@ export const PatientDetail = () => {
                 navigate('/patients');
             } finally {
                 setIsLoading(false);
+                setLoadingReports(false);
             }
         };
 
-        fetchPatient();
+        fetchPatientAndReports();
     }, [id, navigate]);
 
     const handleDelete = async () => {
@@ -207,6 +220,54 @@ export const PatientDetail = () => {
                             </div>
                         </div>
                     </div>
+
+                    <div className="border-t border-border" />
+
+                    {/* Laboratory Reports */}
+                    {user?.role !== ROLES.STAFF && (
+                        <div>
+                            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                                <FlaskConical className="h-5 w-5 text-primary" />
+                                Laboratory Reports
+                            </h3>
+                            <div className="glass-card rounded-2xl overflow-hidden border border-border">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-muted/50 text-muted-foreground">
+                                        <tr>
+                                            <th className="px-6 py-3 font-medium">Test Name</th>
+                                            <th className="px-6 py-3 font-medium">Date Uploaded</th>
+                                            <th className="px-6 py-3 font-medium">Status & Notes</th>
+                                            <th className="px-6 py-3 font-medium text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {loadingReports ? (
+                                            <tr><td colSpan={4} className="text-center py-6">Loading...</td></tr>
+                                        ) : labReports.length === 0 ? (
+                                            <tr><td colSpan={4} className="text-center py-6 text-muted-foreground border-t border-border/50">No lab reports found.</td></tr>
+                                        ) : (
+                                            labReports.map((report) => (
+                                                <tr key={report.id} className="border-t border-border/50 hover:bg-muted/20">
+                                                    <td className="px-6 py-4 font-medium">{report.lab_request_details?.test_details?.test_name}</td>
+                                                    <td className="px-6 py-4 text-muted-foreground">{formatDate(report.uploaded_at)}</td>
+                                                    <td className="px-6 py-4 truncate max-w-[200px]" title={report.result_summary}>{report.result_summary}</td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        {report.report_file ? (
+                                                            <Button size="sm" variant="outline" onClick={() => window.open(report.report_file as string, '_blank')}>
+                                                                <DownloadCloud className="mr-2 h-4 w-4" /> Download
+                                                            </Button>
+                                                        ) : (
+                                                            <Badge variant="secondary">Done (No file)</Badge>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="border-t border-border pt-4">
                         <p className="text-xs text-muted-foreground flex items-center gap-1">

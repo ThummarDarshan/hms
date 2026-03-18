@@ -45,7 +45,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setUser(freshUser);
             localStorage.setItem('user', JSON.stringify(freshUser));
           } catch {
-            // Token might be expired, will be handled by interceptor
+            // Imported DB or expired token can invalidate saved JWT; force clean logout state.
+            authService.logout();
+            setUser(null);
           }
         }
       } catch (error) {
@@ -90,6 +92,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem('user', JSON.stringify(freshUser));
     } catch (error) {
       console.error('Failed to refresh user:', error);
+      authService.logout();
+      setUser(null);
     }
   };
 

@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { recordService } from '@/services/recordService';
+import { laboratoryService, LabTestType } from '@/services/laboratoryService';
 import { ButtonLoader } from '@/components/common/Loader';
 import { toast } from '@/hooks/use-toast';
 
 
 interface PrescriptionFormProps {
   appointmentId: number;
+  patientId: number;
+  doctorId: number;
   patientName: string;
   onSuccess: () => void;
   onCancel: () => void;
@@ -13,19 +16,29 @@ interface PrescriptionFormProps {
 
 export const PrescriptionForm = ({
   appointmentId,
+  patientId,
+  doctorId,
   patientName,
   onSuccess,
   onCancel,
 }: PrescriptionFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [testTypes, setTestTypes] = useState<LabTestType[]>([]);
   const [formData, setFormData] = useState({
     diagnosis: '',
     medications: '',
     instructions: '',
     bed_required: false,
     expected_bed_days: '',
+    request_lab_test: false,
+    lab_test_ids: [] as string[],
+    lab_notes: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    laboratoryService.getTestTypes().then(setTestTypes).catch(console.error);
+  }, []);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -37,6 +50,9 @@ export const PrescriptionForm = ({
       if (!formData.expected_bed_days || Number(formData.expected_bed_days) <= 0) {
         newErrors.expected_bed_days = 'Please enter a valid number of days';
       }
+    }
+    if (formData.request_lab_test && formData.lab_test_ids.length === 0) {
+      newErrors.lab_test_ids = 'Please select at least one lab test';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -56,8 +72,20 @@ export const PrescriptionForm = ({
         bed_required: formData.bed_required,
         expected_bed_days: formData.bed_required ? Number(formData.expected_bed_days) : null,
       };
-
       await recordService.create(prescriptionData);
+
+      if (formData.request_lab_test && formData.lab_test_ids.length > 0) {
+        for (const testId of formData.lab_test_ids) {
+          await laboratoryService.createRequest({
+            patient: patientId,
+            doctor: doctorId,
+            appointment: appointmentId,
+            test: parseInt(testId),
+            notes: formData.lab_notes
+          });
+        }
+      }
+
       toast({
         title: 'Success!',
         description: 'Prescription created successfully',
@@ -198,6 +226,67 @@ export const PrescriptionForm = ({
             )}
             <p className="text-xs text-muted-foreground mt-1">
               This request will be sent to the admin for bed allocation.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Lab Request */}
+      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 space-y-4">
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="request_lab_test"
+            checked={formData.request_lab_test}
+            onChange={(e) => setFormData({ ...formData, request_lab_test: e.target.checked })}
+            className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+          />
+          <label htmlFor="request_lab_test" className="font-medium text-blue-900 cursor-pointer">
+            Request Laboratory Test
+          </label>
+        </div>
+
+        {formData.request_lab_test && (
+          <div className="pl-8 animate-in fade-in slide-in-from-top-2 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-blue-900 mb-2">
+                Select Test <span className="text-destructive">*</span>
+              </label>
+              <select
+                multiple
+                value={formData.lab_test_ids}
+                onChange={(e) => {
+                  const options = Array.from(e.target.selectedOptions, option => option.value);
+                  setFormData({ ...formData, lab_test_ids: options });
+                }}
+                className={`w-full px-3 py-2 border rounded-lg bg-background text-foreground transition-colors h-32 ${errors.lab_test_ids
+                  ? 'border-destructive focus:outline-none focus:ring-2 focus:ring-destructive'
+                  : 'border-input focus:outline-none focus:ring-2 focus:ring-primary'
+                  }`}
+              >
+                {testTypes.map(tt => (
+                  <option key={tt.id} value={tt.id}>{tt.test_name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">Hold Ctrl/Cmd to select multiple tests</p>
+              {errors.lab_test_ids && (
+                <p className="mt-1 text-sm text-destructive">⚠ {errors.lab_test_ids}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-blue-900 mb-2">
+                Instructions / Notes for Lab Tech
+              </label>
+              <textarea
+                value={formData.lab_notes}
+                onChange={(e) => setFormData({ ...formData, lab_notes: e.target.value })}
+                placeholder="Any special instructions..."
+                rows={2}
+                className="w-full px-3 py-2 border rounded-lg bg-background text-foreground resize-none border-input focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <p className="text-xs text-blue-700 mt-1">
+              Lab tech will process this once the patient visits the lab.
             </p>
           </div>
         )}

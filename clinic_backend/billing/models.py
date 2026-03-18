@@ -22,6 +22,7 @@ class Billing(models.Model):
     doctor_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     hospital_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     bed_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    lab_charge = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     bed_days = models.IntegerField(default=0)
     bed_charge_per_day = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     discount_percentage = models.IntegerField(default=0)

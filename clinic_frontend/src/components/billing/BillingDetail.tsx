@@ -167,6 +167,30 @@ export const BillingDetail = () => {
                                         </div>
                                     </div>
                                 )}
+                                {Number(bill.lab_charge) > 0 && (
+                                    <div className="flex flex-col py-2 border-b border-border border-dashed">
+                                        <div className="font-medium text-primary mb-2">Lab Charges:</div>
+                                        {bill.lab_tests && bill.lab_tests.length > 0 ? (
+                                            <>
+                                                {bill.lab_tests.map((test: any, index: number) => (
+                                                    <div key={index} className="flex justify-between text-sm ml-2 py-1">
+                                                        <span className="text-muted-foreground">{test.test_name}</span>
+                                                        <span className="text-green-700 font-semibold">₹ {test.price.toFixed(2)}</span>
+                                                    </div>
+                                                ))}
+                                                <div className="flex justify-between py-1 border-t border-border border-dashed mt-1 pt-1">
+                                                    <span className="text-muted-foreground font-medium">Total Lab Charges</span>
+                                                    <span className="text-green-700 font-bold">₹ {Number(bill.lab_charge).toFixed(2)}</span>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="flex justify-between text-sm ml-2 py-1">
+                                                <span className="text-muted-foreground">Lab Tests</span>
+                                                <span className="font-medium text-green-700">₹ {Number(bill.lab_charge).toFixed(2)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 <div className="flex justify-between py-2 text-sm">
                                     <span className="text-muted-foreground">Discount ({bill.discount_percentage}%)</span>
                                     <span className="font-medium text-success">-{formatCurrency(bill.discount_amount)}</span>

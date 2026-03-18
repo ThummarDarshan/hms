@@ -31,9 +31,7 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
         if user.role in ['ADMIN', 'STAFF']:
             return Prescription.objects.all().select_related('patient__user', 'doctor__user', 'appointment')
         elif user.role == 'DOCTOR':
-            # Doctor should see their own prescriptions, AND potentially others if querying for specific patient
-            # For list view, maybe just their own.
-            return Prescription.objects.all().select_related('patient__user', 'doctor__user', 'appointment')
+            return Prescription.objects.filter(doctor__user=user).select_related('patient__user', 'doctor__user', 'appointment')
         elif user.role == 'PATIENT':
             return Prescription.objects.filter(patient__user=user).select_related('patient__user', 'doctor__user', 'appointment')
         return Prescription.objects.none()

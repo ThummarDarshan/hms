@@ -34,10 +34,12 @@ INSTALLED_APPS = [
     'billing',
     'support',
     'beds',
+    'laboratory',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'django.middleware.gzip.GZipMiddleware',  # Enable GZip compression
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -67,18 +69,22 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'clinic_backend.wsgi.application'
 
-# Database
+# Database - PostgreSQL Configuration
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('DATABASE_NAME', default='clinic_management_system'),
-        'USER': config('DATABASE_USER', default='root'),
-        'PASSWORD': config('DATABASE_PASSWORD', default=''),
-        'HOST': config('DATABASE_HOST', default='localhost'),
-        'PORT': config('DATABASE_PORT', default='3306'),
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DATABASE_NAME', default='neondb'),
+        'USER': config('DATABASE_USER', default='neondb_owner'),
+        'PASSWORD': config('DATABASE_PASSWORD', default='npg_cphIg2fi5BzV'),
+        'HOST': config('DATABASE_HOST', default='ep-purple-butterfly-a1a63t0r-pooler.ap-southeast-1.aws.neon.tech'),
+        'PORT': config('DATABASE_PORT', default='5432'),
         'OPTIONS': {
-            'charset': 'utf8mb4',
-        }
+            'sslmode': 'require',
+            'connect_timeout': 10,
+        },
+        'ATOMIC_REQUESTS': True,
+        'CONN_MAX_AGE': 600,  # Connection pooling
+        'AUTOCOMMIT': True,
     }
 }
 
@@ -98,6 +104,10 @@ USE_TZ = True
 
 # Static files
 STATIC_URL = 'static/'
+
+# Media files (uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -119,7 +129,20 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': (
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ),
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour',
+    },
+    'DEFAULT_METADATA_CLASS': None,  # Disable OPTIONS requests metadata
 }
 
 # JWT Settings
@@ -134,6 +157,23 @@ SIMPLE_JWT = {
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
 }
+
+# Caching Configuration - LocalMemCache for development
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'clinic-cache',
+        'TIMEOUT': 300,  # 5 minutes default
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
+
+# Cache time-to-live settings (in seconds)
+CACHE_TIMEOUT = 300  # 5 minutes for general cache
+CACHE_TIMEOUT_VIEWS = 600  # 10 minutes for view cache
+CACHE_TIMEOUT_MODELS = 900  # 15 minutes for model cache
 
 # CORS Settings
 CORS_ALLOW_ALL_ORIGINS = False

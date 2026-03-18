@@ -20,7 +20,9 @@ export const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
+    // Redirect LAB_TECHNICIAN to laboratory instead of dashboard
+    const redirectPath = user.role === 'LAB_TECHNICIAN' ? '/laboratory' : '/dashboard';
+    return <Navigate to={redirectPath} replace />;
   }
 
   return <>{children}</>;

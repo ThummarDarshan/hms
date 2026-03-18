@@ -1,4 +1,5 @@
 import api from './api';
+import { apiCache } from './apiCache';
 
 export interface User {
   id: number;
@@ -6,7 +7,7 @@ export interface User {
   first_name: string;
   last_name: string;
   phone: string;
-  role: 'ADMIN' | 'DOCTOR' | 'STAFF' | 'PATIENT';
+  role: 'ADMIN' | 'DOCTOR' | 'STAFF' | 'PATIENT' | 'LAB_TECHNICIAN';
   is_active: boolean;
   full_name: string;
   patient_id?: number;
@@ -50,7 +51,10 @@ const extractResults = (data: any): any[] => {
 
 export const authService = {
   async login(data: LoginData): Promise<AuthResponse> {
-    const response = await api.post('/accounts/users/login/', data);
+    const response = await api.post('/accounts/users/login/', {
+      ...data,
+      email: data.email.trim().toLowerCase(),
+    });
     return response.data;
   },
 
@@ -60,12 +64,18 @@ export const authService = {
   },
 
   async getProfile(): Promise<User> {
-    const response = await api.get('/accounts/users/profile/');
+    const CACHE_KEY = '/accounts/users/profile/';
+    const cached = apiCache.get(CACHE_KEY);
+    if (cached) return cached;
+
+    const response = await api.get(CACHE_KEY);
+    apiCache.set(CACHE_KEY, response.data, 30_000);
     return response.data;
   },
 
   async updateProfile(data: Partial<User>): Promise<User> {
     const response = await api.patch('/accounts/users/profile/', data);
+    apiCache.clear('/accounts/users/profile/');
     return response.data;
   },
 

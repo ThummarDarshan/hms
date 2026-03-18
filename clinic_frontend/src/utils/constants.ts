@@ -3,6 +3,7 @@ export const ROLES = {
   DOCTOR: 'DOCTOR',
   STAFF: 'STAFF',
   PATIENT: 'PATIENT',
+  LAB_TECHNICIAN: 'LAB_TECHNICIAN',
 } as const;
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -10,6 +11,7 @@ export const ROLE_LABELS: Record<string, string> = {
   DOCTOR: 'Doctor',
   STAFF: 'Staff',
   PATIENT: 'Patient',
+  LAB_TECHNICIAN: 'Lab Technician',
 };
 
 export const APPOINTMENT_STATUS = {

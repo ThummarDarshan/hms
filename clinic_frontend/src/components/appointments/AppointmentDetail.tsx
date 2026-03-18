@@ -281,7 +281,7 @@ export const AppointmentDetail = () => {
                                     )}
                                 </>
                             )}
-                            
+
                             {appointment.status === 'VISITED' && isDoctor && (
                                 <div className="w-full p-3 bg-blue-50/50 rounded-xl flex items-center justify-center gap-2 text-blue-800 border border-blue-100">
                                     <CheckCircle className="h-4 w-4" />
@@ -312,6 +312,8 @@ export const AppointmentDetail = () => {
             >
                 <PrescriptionForm
                     appointmentId={appointment.id}
+                    patientId={appointment.patient}
+                    doctorId={appointment.doctor}
                     patientName={appointment.patient_name || 'Patient'}
                     onSuccess={() => {
                         setShowPrescriptionModal(false);

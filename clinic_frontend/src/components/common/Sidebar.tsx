@@ -13,10 +13,12 @@ import {
   Activity,
   Building2,
   BedDouble,
+  FlaskConical,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { ROLES } from '@/utils/constants';
+import { prefetchRoute } from '@/utils/routePrefetch';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -29,7 +31,7 @@ const menuItems = [
     title: 'Dashboard',
     icon: LayoutDashboard,
     path: '/dashboard',
-    roles: [ROLES.ADMIN, ROLES.DOCTOR, ROLES.STAFF, ROLES.PATIENT],
+    roles: [ROLES.ADMIN, ROLES.DOCTOR, ROLES.STAFF, ROLES.PATIENT, ROLES.LAB_TECHNICIAN],
   },
   {
     title: 'Appointments',
@@ -60,6 +62,12 @@ const menuItems = [
     icon: BedDouble,
     path: '/beds',
     roles: [ROLES.ADMIN, ROLES.STAFF],
+  },
+  {
+    title: 'Laboratory',
+    icon: FlaskConical,
+    path: '/laboratory',
+    roles: [ROLES.ADMIN, ROLES.DOCTOR, ROLES.STAFF, ROLES.LAB_TECHNICIAN, ROLES.PATIENT],
   },
   {
     title: 'Medical Records',
@@ -137,6 +145,8 @@ export const Sidebar = ({ isOpen, onToggle, isMobile = false }: SidebarProps) =>
                 <li key={item.path}>
                   <NavLink
                     to={item.path}
+                    onMouseEnter={() => prefetchRoute(item.path)}
+                    onFocus={() => prefetchRoute(item.path)}
                     className={({ isActive }) => cn(
                       'nav-link group relative overflow-hidden',
                       isActive && 'active'

@@ -74,12 +74,12 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
-            email = serializer.validated_data['email']
+            email = serializer.validated_data['email'].strip().lower()
             password = serializer.validated_data['password']
             
             # Try to get user by email and check password
             try:
-                user = User.objects.get(email=email)
+                user = User.objects.get(email__iexact=email)
                 if user.check_password(password):
                     if not user.is_active:
                         return Response({

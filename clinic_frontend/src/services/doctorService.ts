@@ -1,4 +1,5 @@
 import api from './api';
+import { apiCache } from './apiCache';
 
 export interface Department {
   id: number;
@@ -74,67 +75,126 @@ const extractResults = (data: any): any[] => {
 export const doctorService = {
   // Departments
   async getDepartments(): Promise<Department[]> {
-    const response = await api.get('/doctors/departments/');
-    return extractResults(response.data);
+    const CACHE_KEY = '/doctors/departments/';
+    const cached = apiCache.get(CACHE_KEY);
+    if (cached) return cached;
+    
+    const response = await api.get(CACHE_KEY);
+    const data = extractResults(response.data);
+    apiCache.set(CACHE_KEY, data);
+    return data;
   },
 
   async createDepartment(data: { name: string; description: string }): Promise<Department> {
     const response = await api.post('/doctors/departments/', data);
+    apiCache.clear('departments'); // Clear cache after creation
     return response.data;
   },
 
   // Doctors
   async getAll(): Promise<Doctor[]> {
-    const response = await api.get('/doctors/doctors/');
-    return extractResults(response.data);
+    const CACHE_KEY = '/doctors/doctors/';
+    const cached = apiCache.get(CACHE_KEY);
+    if (cached) return cached;
+    
+    const response = await api.get(CACHE_KEY);
+    const data = extractResults(response.data);
+    apiCache.set(CACHE_KEY, data);
+    return data;
+  },
+
+  async getDoctors(): Promise<Doctor[]> {
+    const CACHE_KEY = '/doctors/doctors/';
+    const cached = apiCache.get(CACHE_KEY);
+    if (cached) return cached;
+    
+    const response = await api.get(CACHE_KEY);
+    const data = extractResults(response.data);
+    apiCache.set(CACHE_KEY, data);
+    return data;
   },
 
   async getById(id: number): Promise<Doctor> {
-    const response = await api.get(`/doctors/doctors/${id}/`);
+    const CACHE_KEY = `/doctors/doctors/${id}/`;
+    const cached = apiCache.get(CACHE_KEY);
+    if (cached) return cached;
+    
+    const response = await api.get(CACHE_KEY);
+    apiCache.set(CACHE_KEY, response.data);
     return response.data;
   },
 
   async create(data: CreateDoctorData): Promise<Doctor> {
     const response = await api.post('/doctors/doctors/', data);
+    apiCache.clear('doctors'); // Clear cache after creation
     return response.data;
   },
 
   async createNewDoctor(data: NewDoctorData): Promise<any> {
     // Uses the new Admin endpoint to create both User and Doctor profile
     const response = await api.post('/accounts/users/create_doctor/', data);
+    apiCache.clear('doctors');
     return response.data;
   },
 
   async update(id: number, data: Partial<CreateDoctorData>): Promise<Doctor> {
     const response = await api.put(`/doctors/doctors/${id}/`, data);
+    apiCache.clear('doctors'); // Clear cache after update
     return response.data;
   },
 
   async delete(id: number): Promise<void> {
     await api.delete(`/doctors/doctors/${id}/`);
+    apiCache.clear('doctors'); // Clear cache after delete
   },
 
   async getAvailable(): Promise<Doctor[]> {
+    const CACHE_KEY = '/doctors/doctors/available/';
+    const cached = apiCache.get(CACHE_KEY);
+    if (cached) return cached;
+    
     const response = await api.get('/doctors/doctors/available_doctors/');
-    return extractResults(response.data);
+    const data = extractResults(response.data);
+    apiCache.set(CACHE_KEY, data);
+    return data;
   },
 
   async getAvailableSlots(doctorId: number): Promise<Slot[]> {
-    const response = await api.get(`/doctors/doctors/${doctorId}/available_slots/`);
-    return extractResults(response.data);
+    const CACHE_KEY = `/doctors/doctors/${doctorId}/available_slots/`;
+    const cached = apiCache.get(CACHE_KEY);
+    if (cached) return cached;
+    
+    const response = await api.get(CACHE_KEY);
+    const data = extractResults(response.data);
+    apiCache.set(CACHE_KEY, data);
+    return data;
   },
 
   async getAllSlots(doctorId?: number): Promise<Slot[]> {
     if (doctorId) {
-      const response = await api.get(`/doctors/doctors/${doctorId}/all_slots/`);
-      return extractResults(response.data);
+      const CACHE_KEY = `/doctors/doctors/${doctorId}/all_slots/`;
+      const cached = apiCache.get(CACHE_KEY);
+      if (cached) return cached;
+      
+      const response = await api.get(CACHE_KEY);
+      const data = extractResults(response.data);
+      apiCache.set(CACHE_KEY, data);
+      return data;
     }
-    const response = await api.get('/doctors/slots/');
-    return extractResults(response.data);
+    
+    const CACHE_KEY = '/doctors/slots/';
+    const cached = apiCache.get(CACHE_KEY);
+    if (cached) return cached;
+    
+    const response = await api.get(CACHE_KEY);
+    const data = extractResults(response.data);
+    apiCache.set(CACHE_KEY, data);
+    return data;
   },
 
   async createSlot(data: Omit<Slot, 'id'>): Promise<Slot> {
     const response = await api.post('/doctors/slots/', data);
+    apiCache.clear('slots'); // Clear cache after creation
     return response.data;
   },
 };

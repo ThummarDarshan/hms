@@ -14,6 +14,14 @@ export interface Bill {
   bed_charge: number;
   bed_days: number;
   bed_charge_per_day: number;
+  lab_charge: number;
+  lab_tests?: Array<{
+    id: number;
+    test_name: string;
+    price: number;
+    lab_request_id: number;
+    completed_at?: string;
+  }>;
   discount_percentage: number;
   discount_amount: number;
   final_amount: number;

@@ -113,6 +113,29 @@ export const InvoicePrint = () => {
                                 <td className="py-4 text-right font-medium">{formatCurrency(bill.bed_charge)}</td>
                             </tr>
                         )}
+                        {Number(bill.lab_charge) > 0 && (
+                            <>
+                                {bill.lab_tests && bill.lab_tests.length > 0 ? (
+                                    <>
+                                        {bill.lab_tests.map((test: any, index: number) => (
+                                            <tr key={index}>
+                                                <td className="py-3 text-gray-800">{test.test_name}</td>
+                                                <td className="py-3 text-right font-medium text-emerald-600">₹ {test.price.toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+                                        <tr>
+                                            <td className="py-3 text-gray-600 font-medium">Total Lab Charges</td>
+                                            <td className="py-3 text-right font-bold text-emerald-600">₹ {Number(bill.lab_charge).toFixed(2)}</td>
+                                        </tr>
+                                    </>
+                                ) : (
+                                    <tr>
+                                        <td className="py-4 text-gray-800">Lab Charges</td>
+                                        <td className="py-4 text-right font-medium">{formatCurrency(bill.lab_charge || 0)}</td>
+                                    </tr>
+                                )}
+                            </>
+                        )}
 
                         {/* Summary Section within Table or separate */}
                     </tbody>

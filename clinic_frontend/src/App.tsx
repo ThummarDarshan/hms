@@ -3,45 +3,56 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { AuthProvider } from "@/context/AuthContext";
 import { PrivateRoute } from "@/components/common/PrivateRoute";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Login } from "@/components/auth/Login";
-import { Register } from "@/components/auth/Register";
-import { ForgotPassword } from "@/components/auth/ForgotPassword";
-import { ResetPassword } from "@/components/auth/ResetPassword";
-import { Dashboard } from "@/components/dashboard/Dashboard";
-import { Profile } from "@/components/profile/Profile";
-import { AppointmentList } from "@/components/appointments/AppointmentList";
-import { AppointmentDetail } from "@/components/appointments/AppointmentDetail";
-import { AppointmentForm } from "@/components/appointments/AppointmentForm";
-import { DoctorList } from "@/components/doctors/DoctorList";
-import { DepartmentList } from "@/components/departments/DepartmentList";
-import { PatientList } from "@/components/patients/PatientList";
-import { PatientForm } from "@/components/patients/PatientForm";
-import { PatientDetail } from "@/components/patients/PatientDetail";
-import { DoctorForm } from "@/components/doctors/DoctorForm";
-import { PrescriptionList } from "@/components/records/PrescriptionList";
-import { PrescriptionDetail } from "@/components/records/PrescriptionDetail";
-import { MedicalReportPrint } from "@/components/records/MedicalReportPrint";
-import { BedDashboard } from "@/components/beds/BedDashboard";
-import { BillingList } from "@/components/billing/BillingList";
-import { BillingDetail } from "@/components/billing/BillingDetail";
-import { BillingForm } from "@/components/billing/BillingForm";
-import { InvoicePrint } from "@/components/billing/InvoicePrint";
-import { NotificationList } from "@/components/notifications/NotificationList";
-import { SupportList } from "@/components/support/SupportList";
-import NotFound from "./pages/NotFound";
 import { doctorService } from "@/services/doctorService";
 import { patientService } from "@/services/patientService";
 
-const queryClient = new QueryClient();
+const DashboardLayout = lazy(() => import("@/components/layout/DashboardLayout").then((m) => ({ default: m.DashboardLayout })));
+const Login = lazy(() => import("@/components/auth/Login").then((m) => ({ default: m.Login })));
+const Register = lazy(() => import("@/components/auth/Register").then((m) => ({ default: m.Register })));
+const ForgotPassword = lazy(() => import("@/components/auth/ForgotPassword").then((m) => ({ default: m.ForgotPassword })));
+const ResetPassword = lazy(() => import("@/components/auth/ResetPassword").then((m) => ({ default: m.ResetPassword })));
+const Dashboard = lazy(() => import("@/components/dashboard/Dashboard").then((m) => ({ default: m.Dashboard })));
+const Profile = lazy(() => import("@/components/profile/Profile").then((m) => ({ default: m.Profile })));
+const AppointmentList = lazy(() => import("@/components/appointments/AppointmentList").then((m) => ({ default: m.AppointmentList })));
+const AppointmentDetail = lazy(() => import("@/components/appointments/AppointmentDetail").then((m) => ({ default: m.AppointmentDetail })));
+const AppointmentForm = lazy(() => import("@/components/appointments/AppointmentForm").then((m) => ({ default: m.AppointmentForm })));
+const DoctorList = lazy(() => import("@/components/doctors/DoctorList").then((m) => ({ default: m.DoctorList })));
+const DepartmentList = lazy(() => import("@/components/departments/DepartmentList").then((m) => ({ default: m.DepartmentList })));
+const PatientList = lazy(() => import("@/components/patients/PatientList").then((m) => ({ default: m.PatientList })));
+const PatientForm = lazy(() => import("@/components/patients/PatientForm").then((m) => ({ default: m.PatientForm })));
+const PatientDetail = lazy(() => import("@/components/patients/PatientDetail").then((m) => ({ default: m.PatientDetail })));
+const DoctorForm = lazy(() => import("@/components/doctors/DoctorForm").then((m) => ({ default: m.DoctorForm })));
+const PrescriptionList = lazy(() => import("@/components/records/PrescriptionList").then((m) => ({ default: m.PrescriptionList })));
+const PrescriptionDetail = lazy(() => import("@/components/records/PrescriptionDetail").then((m) => ({ default: m.PrescriptionDetail })));
+const MedicalReportPrint = lazy(() => import("@/components/records/MedicalReportPrint").then((m) => ({ default: m.MedicalReportPrint })));
+const BedDashboard = lazy(() => import("@/components/beds/BedDashboard").then((m) => ({ default: m.BedDashboard })));
+const BillingList = lazy(() => import("@/components/billing/BillingList").then((m) => ({ default: m.BillingList })));
+const BillingDetail = lazy(() => import("@/components/billing/BillingDetail").then((m) => ({ default: m.BillingDetail })));
+const BillingForm = lazy(() => import("@/components/billing/BillingForm").then((m) => ({ default: m.BillingForm })));
+const InvoicePrint = lazy(() => import("@/components/billing/InvoicePrint").then((m) => ({ default: m.InvoicePrint })));
+const NotificationList = lazy(() => import("@/components/notifications/NotificationList").then((m) => ({ default: m.NotificationList })));
+const SupportList = lazy(() => import("@/components/support/SupportList").then((m) => ({ default: m.SupportList })));
+const LabDashboard = lazy(() => import("@/components/laboratory/LabDashboard").then((m) => ({ default: m.LabDashboard })));
+const LabReportDetail = lazy(() => import("@/components/laboratory/LabReportDetail").then((m) => ({ default: m.LabReportDetail })));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 // Component wrapper for appointment form with modal behavior
 const AppointmentFormWrapper = () => {
   const navigate = useNavigate();
-  const [departments, setDepartments] = useState([]);
 
   return (
     <div className="space-y-6">
@@ -163,6 +174,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading...</div>}>
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
@@ -253,8 +265,15 @@ const App = () => (
               <Route path="/beds" element={<BedDashboard />} />
             </Route>
 
+            {/* Laboratory Routes */}
+            <Route element={<PrivateRoute><DashboardLayout title="Laboratory" /></PrivateRoute>}>
+              <Route path="/laboratory" element={<LabDashboard />} />
+              <Route path="/laboratory/reports/:id" element={<LabReportDetail />} />
+            </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

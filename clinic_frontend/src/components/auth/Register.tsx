@@ -1,30 +1,99 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, User, Phone, Activity, ChevronDown, ArrowRight, HeartPulse, ShieldCheck, Stethoscope } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, User, Phone, Activity, ChevronDown, ArrowRight, HeartPulse, ShieldCheck, Stethoscope, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useFormValidation } from '@/hooks/useFormValidation';
+import { validators } from '@/utils/validation';
 import { ButtonLoader } from '@/components/common/Loader';
 import { toast } from '@/hooks/use-toast';
 import { ROLES, ROLE_LABELS } from '@/utils/constants';
 
 export const Register = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
-  const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirm_password: '',
-    role: 'PATIENT',
-  });
+  const { register: authRegister } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [ekgPath, setEkgPath] = useState('');
+  const [backendErrors, setBackendErrors] = useState<Record<string, string>>({});
 
-  // Generate a dynamic EKG path (Green for light mode)
+  const validationRules = {
+    first_name: [
+      { validator: (val: string) => validators.isRequired(val), message: 'First name is required' },
+      { validator: (val: string) => validators.isValidName(val), message: 'First name must be 2-100 characters (letters, spaces, hyphens)' }
+    ],
+    last_name: [
+      { validator: (val: string) => validators.isRequired(val), message: 'Last name is required' },
+      { validator: (val: string) => validators.isValidName(val), message: 'Last name must be 2-100 characters (letters, spaces, hyphens)' }
+    ],
+    email: [
+      { validator: (val: string) => validators.isRequired(val), message: 'Email is required' },
+      { validator: (val: string) => validators.isValidEmail(val), message: 'Please enter a valid email address' }
+    ],
+    phone: [
+      { validator: (val: string) => validators.isRequired(val), message: 'Phone is required' },
+      { validator: (val: string) => validators.isValidPhone(val), message: 'Phone must be exactly 10 digits' }
+    ],
+    password: [
+      { validator: (val: string) => validators.isRequired(val), message: 'Password is required' },
+      { validator: (val: string) => validators.isPasswordStrong(val), message: 'Password must be 8+ chars with letters and numbers' }
+    ],
+    confirm_password: [
+      { validator: (val: string, formData) => val === formData.password, message: 'Passwords must match' }
+    ]
+  };
+
+  const { 
+    formData, 
+    errors, 
+    touched, 
+    isSubmitting, 
+    handleChange, 
+    handleBlur, 
+    handleSubmit,
+    setFieldError 
+  } = useFormValidation(
+    {
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      password: '',
+      confirm_password: '',
+      role: 'PATIENT',
+    },
+    handleRegisterSubmit,
+    validationRules
+  );
+
+  async function handleRegisterSubmit(values: any) {
+    try {
+      setBackendErrors({});
+      await authRegister(values);
+      toast({
+        title: 'Account Created!',
+        description: 'Welcome to HealthCare Pro. Your account has been created successfully.',
+      });
+      navigate('/dashboard');
+    } catch (error: any) {
+      // Handle backend validation errors
+      if (error.response?.data) {
+        const backendErrs = error.response.data;
+        Object.entries(backendErrs).forEach(([field, messages]: [string, any]) => {
+          const message = Array.isArray(messages) ? messages[0] : messages;
+          setFieldError(field, message);
+          setBackendErrors(prev => ({ ...prev, [field]: message }));
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Registration Failed',
+          description: error.message || 'Something went wrong. Please try again.',
+        });
+      }
+    }
+  }
+
+  // Generate a dynamic EKG path 
   useEffect(() => {
     const width = 2000;
     const height = 200;
@@ -35,61 +104,14 @@ export const Register = () => {
     while (x < width) {
       x += Math.random() * 30 + 20;
       path += ` L ${x} ${baseline}`;
-      const spikeHeight = Math.random() * 100 + 30; // Slightly shorter spikes for cleaner look
+      const spikeHeight = Math.random() * 100 + 30;
       path += ` L ${x + 5} ${baseline - spikeHeight} L ${x + 10} ${baseline + spikeHeight * 0.6} L ${x + 15} ${baseline}`;
       x += 20;
     }
     setEkgPath(path);
   }, []);
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.first_name.trim()) newErrors.first_name = 'First name is required';
-    if (!formData.last_name.trim()) newErrors.last_name = 'Last name is required';
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email';
-    }
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone is required';
-    }
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    }
-    if (!formData.confirm_password) {
-      newErrors.confirm_password = 'Please confirm your password';
-    } else if (formData.password !== formData.confirm_password) {
-      newErrors.confirm_password = 'Passwords do not match';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-    try {
-      await register(formData);
-      toast({
-        title: 'Account Created!',
-        description: 'Welcome to HealthCare Pro. Your account has been created successfully.',
-      });
-      navigate('/dashboard');
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Registration Failed',
-        description: error.response?.data?.message || 'Something went wrong. Please try again.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const allowedRoles = [ROLES.PATIENT, ROLES.DOCTOR];
 
@@ -189,24 +211,32 @@ export const Register = () => {
                     <User className="absolute left-3 top-3.5 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                     <input
                       type="text"
+                      name="first_name"
                       value={formData.first_name}
-                      onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                      className="w-full bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 placeholder-slate-400 pl-10 pr-4 py-3 outline-none text-sm font-medium transition-all shadow-sm"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full bg-white border rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 placeholder-slate-400 pl-10 pr-4 py-3 outline-none text-sm font-medium transition-all shadow-sm ${
+                        errors.first_name && touched.has('first_name') ? 'border-red-500' : 'border-slate-200'
+                      }`}
                       placeholder="John"
                     />
                   </div>
-                  {errors.first_name && <p className="text-xs text-red-500 font-medium ml-1">{errors.first_name}</p>}
+                  {errors.first_name && touched.has('first_name') && <p className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.first_name}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Last Name</label>
                   <input
                     type="text"
+                    name="last_name"
                     value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    className="w-full bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 placeholder-slate-400 px-4 py-3 outline-none text-sm font-medium transition-all shadow-sm"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full bg-white border rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 placeholder-slate-400 px-4 py-3 outline-none text-sm font-medium transition-all shadow-sm ${
+                      errors.last_name && touched.has('last_name') ? 'border-red-500' : 'border-slate-200'
+                    }`}
                     placeholder="Doe"
                   />
-                  {errors.last_name && <p className="text-xs text-red-500 font-medium ml-1">{errors.last_name}</p>}
+                  {errors.last_name && touched.has('last_name') && <p className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.last_name}</p>}
                 </div>
               </div>
 
@@ -216,13 +246,17 @@ export const Register = () => {
                   <Mail className="absolute left-3 top-3.5 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                   <input
                     type="email"
+                    name="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 placeholder-slate-400 pl-10 pr-4 py-3 outline-none text-sm font-medium transition-all shadow-sm"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full bg-white border rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 placeholder-slate-400 pl-10 pr-4 py-3 outline-none text-sm font-medium transition-all shadow-sm ${
+                      errors.email && touched.has('email') ? 'border-red-500' : 'border-slate-200'
+                    }`}
                     placeholder="john@example.com"
                   />
                 </div>
-                {errors.email && <p className="text-xs text-red-500 font-medium ml-1">{errors.email}</p>}
+                {errors.email && touched.has('email') && <p className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.email}</p>}
               </div>
 
               <div className="space-y-1.5">
@@ -231,22 +265,17 @@ export const Register = () => {
                   <Phone className="absolute left-3 top-3.5 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                   <input
                     type="tel"
+                    name="phone"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 placeholder-slate-400 pl-10 pr-4 py-3 outline-none text-sm font-medium transition-all shadow-sm"
-                    placeholder="+1 234 567 8900"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full bg-white border rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 placeholder-slate-400 pl-10 pr-4 py-3 outline-none text-sm font-medium transition-all shadow-sm ${
+                      errors.phone && touched.has('phone') ? 'border-red-500' : 'border-slate-200'
+                    }`}
+                    placeholder="9876543210"
                   />
                 </div>
-                {errors.phone && <p className="text-xs text-red-500 font-medium ml-1">{errors.phone}</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Account Type</label>
-                <div className="relative">
-                  <div className="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-slate-500 text-sm font-medium shadow-sm">
-                    Patient
-                  </div>
-                </div>
+                {errors.phone && touched.has('phone') && <p className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.phone}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -256,32 +285,40 @@ export const Register = () => {
                     <Lock className="absolute left-3 top-3.5 w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
                     <input
                       type={showPassword ? 'text' : 'password'}
+                      name="password"
                       value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 placeholder-slate-400 pl-10 pr-10 py-3 outline-none text-sm font-medium transition-all shadow-sm"
-                      placeholder="••••••••"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full bg-white border rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 placeholder-slate-400 pl-10 pr-10 py-3 outline-none text-sm font-medium transition-all shadow-sm ${
+                        errors.password && touched.has('password') ? 'border-red-500' : 'border-slate-200'
+                      }`}
+                      placeholder="Min 8 chars, letters + numbers"
                     />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3.5 text-slate-400 hover:text-emerald-600 transition-colors">
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  {errors.password && <p className="text-xs text-red-500 font-medium ml-1">{errors.password}</p>}
+                  {errors.password && touched.has('password') && <p className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.password}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">Confirm</label>
                   <div className="relative group">
                     <input
                       type={showConfirmPassword ? 'text' : 'password'}
+                      name="confirm_password"
                       value={formData.confirm_password}
-                      onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
-                      className="w-full bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 placeholder-slate-400 px-4 pr-10 py-3 outline-none text-sm font-medium transition-all shadow-sm"
-                      placeholder="••••••••"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full bg-white border rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 placeholder-slate-400 px-4 pr-10 py-3 outline-none text-sm font-medium transition-all shadow-sm ${
+                        errors.confirm_password && touched.has('confirm_password') ? 'border-red-500' : 'border-slate-200'
+                      }`}
+                      placeholder="Confirm password"
                     />
                     <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-3.5 text-slate-400 hover:text-emerald-600 transition-colors">
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  {errors.confirm_password && <p className="text-xs text-red-500 font-medium ml-1">{errors.confirm_password}</p>}
+                  {errors.confirm_password && touched.has('confirm_password') && <p className="text-xs text-red-500 font-medium ml-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{errors.confirm_password}</p>}
                 </div>
               </div>
 
@@ -307,12 +344,12 @@ export const Register = () => {
 
               <button
                 type="submit"
-                disabled={isLoading}
-                className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 p-[1px] shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.01] hover:shadow-emerald-500/40 mt-2"
+                disabled={isSubmitting}
+                className="relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 p-[1px] shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.01] hover:shadow-emerald-500/40 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="relative h-full w-full bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3.5 transition-all">
                   <div className="flex items-center justify-center gap-2">
-                    {isLoading ? (
+                    {isSubmitting ? (
                       <ButtonLoader className="text-white" />
                     ) : (
                       <>

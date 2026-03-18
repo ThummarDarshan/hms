@@ -36,13 +36,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('DOCTOR', 'Doctor'),
         ('STAFF', 'Staff'),
         ('PATIENT', 'Patient'),
+        ('LAB_TECHNICIAN', 'Lab Technician'),
     ]
     
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=15, blank=True, null=True)
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='PATIENT')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='PATIENT')
     
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)

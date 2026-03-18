@@ -34,6 +34,14 @@ class IsPatient(BasePermission):
         return request.user and request.user.is_authenticated and request.user.role == 'PATIENT'
 
 
+class IsLabTech(BasePermission):
+    """
+    Permission check for LAB_TECHNICIAN role
+    """
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.role == 'LAB_TECHNICIAN'
+
+
 class IsAdminOrStaff(BasePermission):
     """
     Permission check for ADMIN or STAFF roles

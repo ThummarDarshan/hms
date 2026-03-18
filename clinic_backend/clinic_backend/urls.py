@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 urlpatterns = [
@@ -14,4 +16,11 @@ urlpatterns = [
     path('api/billing/', include('billing.urls')),
     path('api/support/', include('support.urls')),
     path('api/beds/', include('beds.urls')),
+    path('api/laboratory/', include('laboratory.urls')),
 ]
+
+if settings.DEBUG:
+    # Current media URL support
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Backward-compatible support for links like /lab_reports/<file>
+    urlpatterns += static('/lab_reports/', document_root=settings.MEDIA_ROOT / 'lab_reports')

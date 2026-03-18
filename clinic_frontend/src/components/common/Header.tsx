@@ -18,20 +18,26 @@ export const Header = ({ title, onMenuClick }: HeaderProps) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hasFetchedNotifications, setHasFetchedNotifications] = useState(false);
 
   useEffect(() => {
+    if (!showNotifications || hasFetchedNotifications) {
+      return;
+    }
+
     const fetchNotifications = async () => {
       try {
         const data = await notificationService.getUnread();
         setNotifications(data.slice(0, 5));
         setUnreadCount(data.length);
+        setHasFetchedNotifications(true);
       } catch (error) {
         console.error('Failed to fetch notifications:', error);
       }
     };
 
     fetchNotifications();
-  }, []);
+  }, [showNotifications, hasFetchedNotifications]);
 
   const handleLogout = () => {
     logout();

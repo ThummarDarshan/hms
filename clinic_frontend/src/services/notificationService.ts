@@ -1,4 +1,5 @@
 import api from './api';
+import { apiCache } from './apiCache';
 
 export interface Notification {
   id: number;
@@ -34,17 +35,30 @@ const extractResults = (data: any): any[] => {
 
 export const notificationService = {
   async getAll(): Promise<Notification[]> {
-    const response = await api.get('/support/notifications/');
-    return extractResults(response.data);
+    const CACHE_KEY = '/support/notifications/';
+    const cached = apiCache.get(CACHE_KEY);
+    if (cached) return cached;
+
+    const response = await api.get(CACHE_KEY);
+    const data = extractResults(response.data);
+    apiCache.set(CACHE_KEY, data, 120_000);
+    return data;
   },
 
   async getUnread(): Promise<Notification[]> {
-    const response = await api.get('/support/notifications/unread/');
-    return extractResults(response.data);
+    const CACHE_KEY = '/support/notifications/unread/';
+    const cached = apiCache.get(CACHE_KEY);
+    if (cached) return cached;
+
+    const response = await api.get(CACHE_KEY);
+    const data = extractResults(response.data);
+    apiCache.set(CACHE_KEY, data, 30_000);
+    return data;
   },
 
   async markRead(id: number): Promise<void> {
     await api.post(`/support/notifications/${id}/mark_read/`);
+    apiCache.clear('notifications');
   },
 
   // Queries

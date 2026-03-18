@@ -60,12 +60,21 @@ export const Login = () => {
                 title: 'Welcome Back!',
                 description: 'Successfully logged in to HealthCare Pro.',
             });
-            navigate('/dashboard');
+            // Redirect LAB_TECHNICIAN users to laboratory module
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            if (storedUser.role === 'LAB_TECHNICIAN') {
+              navigate('/laboratory');
+            } else {
+              navigate('/dashboard');
+            }
         } catch (error: any) {
             toast({
                 variant: 'destructive',
                 title: 'Login Failed',
-                description: error.response?.data?.detail || 'Invalid credentials. Please try again.',
+                description:
+                    error.response?.data?.error ||
+                    error.response?.data?.detail ||
+                    'Invalid credentials. Please try again.',
             });
         } finally {
             setIsLoading(false);

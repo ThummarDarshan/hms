@@ -5,24 +5,30 @@ from rest_framework.permissions import IsAuthenticated
 from .models import Ward, Bed, BedAllocation, BedRequest
 from .serializers import WardSerializer, BedSerializer, BedAllocationSerializer, BedRequestSerializer
 from django.utils import timezone
+from django.db.models import Prefetch
 from accounts.permissions import IsAdminOrStaff
 
 class WardViewSet(viewsets.ModelViewSet):
-    queryset = Ward.objects.all()
+    queryset = Ward.objects.all().order_by('name')
     serializer_class = WardSerializer
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'ward_type']
 
 class BedViewSet(viewsets.ModelViewSet):
-    queryset = Bed.objects.all()
+    queryset = Bed.objects.select_related('ward').all()
     serializer_class = BedSerializer
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
     filter_backends = [filters.SearchFilter]
     search_fields = ['bed_number', 'ward__name', 'bed_type']
     
     def get_queryset(self):
-        queryset = Bed.objects.all()
+        active_allocations = Prefetch(
+            'allocations',
+            queryset=BedAllocation.objects.filter(status='ACTIVE').select_related('patient__user').order_by('-admission_date'),
+            to_attr='prefetched_active_allocations'
+        )
+        queryset = Bed.objects.select_related('ward').prefetch_related(active_allocations).all()
         ward_id = self.request.query_params.get('ward', None)
         status_param = self.request.query_params.get('status', None)
         
@@ -34,7 +40,7 @@ class BedViewSet(viewsets.ModelViewSet):
         return queryset
 
 class BedAllocationViewSet(viewsets.ModelViewSet):
-    queryset = BedAllocation.objects.all()
+    queryset = BedAllocation.objects.select_related('bed__ward', 'patient__user').all().order_by('-admission_date')
     serializer_class = BedAllocationSerializer
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
     filter_backends = [filters.SearchFilter]
@@ -87,7 +93,7 @@ class BedAllocationViewSet(viewsets.ModelViewSet):
         return Response({'status': 'Patient discharged successfully. Payment pending.'})
 
 class BedRequestViewSet(viewsets.ModelViewSet):
-    queryset = BedRequest.objects.all()
+    queryset = BedRequest.objects.select_related('patient__user', 'doctor__user').all().order_by('-created_at')
     serializer_class = BedRequestSerializer
     permission_classes = [IsAuthenticated, IsAdminOrStaff]
     filter_backends = [filters.SearchFilter]
