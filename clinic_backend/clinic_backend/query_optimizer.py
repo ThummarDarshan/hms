@@ -55,7 +55,7 @@ from appointments.models import Appointment
 from records.models import Prescription
 from billing.models import Billing
 from beds.models import Bed, BedAllocation
-from laboratory.models import LabReport, LabTestType
+from laboratory.models import LabReport, LabTestCatalog
 
 
 def get_optimized_doctors():

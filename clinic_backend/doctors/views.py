@@ -37,21 +37,18 @@ class DoctorViewSet(viewsets.ModelViewSet):
     def available_doctors(self, request):
         """Get list of available doctors with caching"""
         cache_key = 'available_doctors'
-        doctors = cache.get(cache_key)
+        cached_data = cache.get(cache_key)
         
-        if doctors is None:
+        if cached_data is None:
             doctors = Doctor.objects.filter(
                 is_available=True
-            ).select_related(
-                'user', 
-                'department'
-            ).values(
-                'id', 'user__first_name', 'user__last_name', 'user__email',
-                'department__name', 'specialization', 'consultation_fee'
-            )
-            cache.set(cache_key, list(doctors), 600)  # Cache 10 mins
+            ).select_related('user', 'department').order_by('user__first_name')
+            
+            serializer = DoctorSerializer(doctors, many=True)
+            cached_data = serializer.data
+            cache.set(cache_key, cached_data, 600)  # Cache 10 mins
         
-        return Response(doctors)
+        return Response(cached_data)
     
     @action(detail=True, methods=['get'])
     def available_slots(self, request, pk=None):

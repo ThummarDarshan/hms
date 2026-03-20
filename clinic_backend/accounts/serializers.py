@@ -10,11 +10,12 @@ class UserSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
     patient_id = serializers.SerializerMethodField()
     doctor_id = serializers.SerializerMethodField()
+    phone_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     
     class Meta:
         model = User
         fields = ['id', 'email', 'password', 'first_name', 'last_name', 
-                  'phone', 'role', 'is_active', 'full_name', 'created_at', 'patient_id', 'doctor_id']
+                  'phone_number', 'role', 'is_active', 'full_name', 'created_at', 'patient_id', 'doctor_id']
         read_only_fields = ['id', 'created_at']
     
     def get_patient_id(self, obj):
@@ -39,9 +40,11 @@ class UserSerializer(serializers.ModelSerializer):
         """Validate last name"""
         return HMSValidators.validate_name(value, "Last name")
     
-    def validate_phone(self, value):
+    def validate_phone_number(self, value):
         """Validate phone number"""
-        return HMSValidators.validate_phone(value)
+        if value:  # Only validate if provided
+            return HMSValidators.validate_phone(value)
+        return value
     
     def create(self, validated_data):
         password = validated_data.pop('password', None)
@@ -65,11 +68,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     """Serializer for patient registration with comprehensive validation"""
     password = serializers.CharField(write_only=True)
     confirm_password = serializers.CharField(write_only=True)
+    phone_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
     
     class Meta:
         model = User
         fields = ['email', 'password', 'confirm_password', 'first_name', 
-                  'last_name', 'phone']
+                  'last_name', 'phone_number']
     
     def validate_email(self, value):
         """Validate email format and check uniqueness"""
@@ -94,31 +98,47 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         """Validate last name"""
         return HMSValidators.validate_name(value, "Last name")
     
-    def validate_phone(self, value):
-        """Validate phone number"""
-        return HMSValidators.validate_phone(value)
+    def validate_phone_number(self, value):
+        """Validate phone number - optional during registration"""
+        if value:  # Only validate if provided
+            return HMSValidators.validate_phone(value)
+        return value
     
-    def validate(self, attrs):
-        """Validate password confirmation"""
-        password = attrs.get('password')
-        confirm_password = attrs.get('confirm_password')
+    def validate(self, data):
+        """Check that the two password entries match"""
+        password = data.get('password')
+        confirm_password = data.get('confirm_password')
         
         if password != confirm_password:
             raise serializers.ValidationError({
                 "confirm_password": "Passwords do not match"
             })
         
-        return attrs
+        return data
     
     def create(self, validated_data):
         """Create user with password"""
-        validated_data.pop('confirm_password')
-        password = validated_data.pop('password')
+        validated_data.pop('confirm_password', None)
+        password = validated_data.pop('password', None)
+        phone_number = validated_data.pop('phone_number', None)
+        
+        # Convert empty string to None
+        if phone_number == '':
+            phone_number = None
+        
         validated_data['role'] = 'PATIENT'
         
         user = User.objects.create(**validated_data)
-        user.set_password(password)
-        user.save()
+        
+        # Set phone number if provided
+        if phone_number:
+            user.phone_number = phone_number
+            user.save()
+        
+        # Set password
+        if password:
+            user.set_password(password)
+            user.save()
         
         return user
 

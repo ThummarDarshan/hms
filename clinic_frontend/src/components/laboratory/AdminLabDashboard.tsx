@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 export const AdminLabDashboard = () => {
     const [activeTab, setActiveTab] = useState('tests');
     const [testTypes, setTestTypes] = useState<LabTestType[]>([]);
-    const [requests, setRequests] = useState<LabRequest[]>([]);
     const [reports, setReports] = useState<LabReport[]>([]);
     const [patients, setPatients] = useState<Patient[]>([]);
     const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -22,9 +21,9 @@ export const AdminLabDashboard = () => {
     const [formData, setFormData] = useState<Partial<LabTestType>>({ test_name: '', description: '', price: '' });
     const [editingId, setEditingId] = useState<number | null>(null);
     const [isTestTypeDialogOpen, setIsTestTypeDialogOpen] = useState(false);
-    const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
     const [isPatientDetailOpen, setIsPatientDetailOpen] = useState(false);
+    const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
     const [requestFormData, setRequestFormData] = useState({
         patient: '',
         doctor: '',
@@ -35,23 +34,20 @@ export const AdminLabDashboard = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [typesRes, reqRes, repRes, patientRes, doctorRes] = await Promise.allSettled([
+            const [typesRes, repRes, patientRes, doctorRes] = await Promise.allSettled([
                 laboratoryService.getTestTypes(),
-                laboratoryService.getRequests(),
                 laboratoryService.getReports(),
                 patientService.getAll(),
                 doctorService.getAll(),
             ]);
 
             setTestTypes(typesRes.status === 'fulfilled' ? typesRes.value : []);
-            setRequests(reqRes.status === 'fulfilled' ? reqRes.value : []);
             setReports(repRes.status === 'fulfilled' ? repRes.value : []);
             setPatients(patientRes.status === 'fulfilled' ? patientRes.value : []);
             setDoctors(doctorRes.status === 'fulfilled' ? doctorRes.value : []);
 
             const failedSources: string[] = [];
             if (typesRes.status === 'rejected') failedSources.push('Test Types');
-            if (reqRes.status === 'rejected') failedSources.push('Requests');
             if (repRes.status === 'rejected') failedSources.push('Reports');
             if (patientRes.status === 'rejected') failedSources.push('Patients');
             if (doctorRes.status === 'rejected') failedSources.push('Doctors');
@@ -59,7 +55,6 @@ export const AdminLabDashboard = () => {
             if (failedSources.length > 0) {
                 console.error('Laboratory dashboard partial load failure:', {
                     testTypes: typesRes.status === 'rejected' ? typesRes.reason : null,
-                    requests: reqRes.status === 'rejected' ? reqRes.reason : null,
                     reports: repRes.status === 'rejected' ? repRes.reason : null,
                     patients: patientRes.status === 'rejected' ? patientRes.reason : null,
                     doctors: doctorRes.status === 'rejected' ? doctorRes.reason : null,
@@ -85,17 +80,24 @@ export const AdminLabDashboard = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            const payload = {
+                test_name: formData.test_name,
+                description: formData.description,
+                price: formData.price,
+            };
+
             if (editingId) {
-                await laboratoryService.updateTestType(editingId, formData);
+                const updatedTest = await laboratoryService.updateTestType(editingId, payload);
+                setTestTypes(testTypes.map(t => t.id === editingId ? updatedTest : t));
                 toast.success('Lab Test Type updated');
             } else {
-                await laboratoryService.createTestType(formData);
+                const newTest = await laboratoryService.createTestType(payload);
+                setTestTypes([...testTypes, newTest]);
                 toast.success('Lab Test Type created');
             }
             setFormData({ test_name: '', description: '', price: '' });
             setEditingId(null);
             setIsTestTypeDialogOpen(false);
-            fetchTestTypes();
         } catch (error) {
             toast.error('Failed to save Lab Test Type');
         }
@@ -109,7 +111,11 @@ export const AdminLabDashboard = () => {
 
     const openEditTestTypeDialog = (test: LabTestType) => {
         setEditingId(test.id);
-        setFormData(test);
+        setFormData({
+            test_name: test.test_name,
+            description: test.description,
+            price: test.price,
+        });
         setIsTestTypeDialogOpen(true);
     };
 
@@ -191,8 +197,8 @@ export const AdminLabDashboard = () => {
     };
 
     const goToAddReportFlow = () => {
-        setActiveTab('requests');
-        toast.info('Select a request and click Add Report');
+        setActiveTab('reports');
+        toast.info('Select a report entry for lab technician queue');
     };
 
     const openRequestDialog = () => {
@@ -221,12 +227,12 @@ export const AdminLabDashboard = () => {
                 notes: requestFormData.notes,
             });
 
-            toast.success('Lab entry created and sent to lab technician queue');
+            toast.success('Lab request created successfully');
             setIsRequestDialogOpen(false);
-            setActiveTab('requests');
+            setRequestFormData({ patient: '', doctor: '', test: '', notes: '' });
             fetchData();
         } catch (error) {
-            toast.error('Failed to create lab entry');
+            toast.error('Failed to create lab request');
         }
     };
 
@@ -235,7 +241,7 @@ export const AdminLabDashboard = () => {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="mb-4">
                     <TabsTrigger value="tests">Test Types</TabsTrigger>
-                    <TabsTrigger value="requests">Lab Requests</TabsTrigger>
+                    <TabsTrigger value="requests">Create Lab Request</TabsTrigger>
                     <TabsTrigger value="reports">Lab Reports</TabsTrigger>
                 </TabsList>
 
@@ -348,161 +354,82 @@ export const AdminLabDashboard = () => {
                 </TabsContent>
 
                 <TabsContent value="requests">
-                    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden flex flex-col">
-                        <div className="p-6 border-b border-border">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-semibold">All Lab Requests</h2>
-                                <Button onClick={openRequestDialog}>
-                                    <Plus className="mr-2 h-4 w-4" /> New Patient Lab Entry
+                    <div className="rounded-xl border border-border bg-card shadow-sm p-6">
+                        <div className="mb-6">
+                            <h2 className="text-xl font-semibold mb-2">Create Lab Request for Patient</h2>
+                            <p className="text-sm text-muted-foreground">Request a lab test for a patient. The request will be sent to the lab technician queue.</p>
+                        </div>
+
+                        <form onSubmit={(e) => { e.preventDefault(); handleCreateRequest(e); }} className="space-y-4 max-w-lg">
+                            <div>
+                                <label className="text-sm font-medium">Patient</label>
+                                <select
+                                    value={requestFormData.patient}
+                                    onChange={(e) => setRequestFormData({ ...requestFormData, patient: e.target.value })}
+                                    className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    required
+                                >
+                                    <option value="">Select patient</option>
+                                    {patients.map((patient) => (
+                                        <option key={patient.id} value={patient.id}>
+                                            {patient.user_name || `Patient #${patient.id}`}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium">Referring Doctor</label>
+                                <select
+                                    value={requestFormData.doctor}
+                                    onChange={(e) => setRequestFormData({ ...requestFormData, doctor: e.target.value })}
+                                    className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    required
+                                >
+                                    <option value="">Select doctor</option>
+                                    {doctors.map((doctor) => (
+                                        <option key={doctor.id} value={doctor.id}>
+                                            Dr. {doctor.user_name || `Doctor #${doctor.id}`}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium">Test Type</label>
+                                <select
+                                    value={requestFormData.test}
+                                    onChange={(e) => setRequestFormData({ ...requestFormData, test: e.target.value })}
+                                    className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    required
+                                >
+                                    <option value="">Select test</option>
+                                    {testTypes.map((testType) => (
+                                        <option key={testType.id} value={testType.id}>
+                                            {testType.test_name} (₹{parseFloat(String(testType.price)).toFixed(2)})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="text-sm font-medium">Notes (Optional)</label>
+                                <textarea
+                                    value={requestFormData.notes}
+                                    onChange={(e) => setRequestFormData({ ...requestFormData, notes: e.target.value })}
+                                    className="mt-1 w-full p-2 border rounded-md"
+                                    placeholder="Any special instructions..."
+                                    rows={3}
+                                />
+                            </div>
+
+                            <div className="flex gap-2 pt-4">
+                                <Button type="submit" className="flex-1">
+                                    <Plus className="mr-2 h-4 w-4" /> Create Lab Request
                                 </Button>
                             </div>
-                        </div>
-                        <div className="flex-1 overflow-auto p-0">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-muted/50 text-muted-foreground sticky top-0">
-                                    <tr>
-                                        <th className="px-6 py-3 font-medium">ID</th>
-                                        <th className="px-6 py-3 font-medium">Patient</th>
-                                        <th className="px-6 py-3 font-medium">Test</th>
-                                        <th className="px-6 py-3 font-medium">Doctor</th>
-                                        <th className="px-6 py-3 font-medium">Date</th>
-                                        <th className="px-6 py-3 font-medium">Status</th>
-                                        <th className="px-6 py-3 font-medium text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {loading ? (
-                                        <tr><td colSpan={7} className="text-center py-8">Loading...</td></tr>
-                                    ) : requests.length === 0 ? (
-                                        <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">No lab requests found</td></tr>
-                                    ) : (
-                                        requests.map((req) => (
-                                            <tr 
-                                                key={req.id} 
-                                                onClick={() => req.patient_details && openPatientDetail(req.patient_details as unknown as Patient)}
-                                                className="border-b border-border/50 hover:bg-muted/20 odd:bg-background even:bg-muted/10 cursor-pointer transition-colors"
-                                            >
-                                                <td className="px-6 py-4">#{req.id}</td>
-                                                <td className="px-6 py-4 font-medium">{req.patient_details?.user_name}</td>
-                                                <td className="px-6 py-4">{req.test_details?.test_name}</td>
-                                                <td className="px-6 py-4">Dr. {req.doctor_details?.user_name}</td>
-                                                <td className="px-6 py-4 text-muted-foreground">{format(new Date(req.requested_at), 'PPPp')}</td>
-                                                <td className="px-6 py-4">
-                                                    <Badge className={getStatusColor(req.status)} variant="outline">
-                                                        {req.status}
-                                                    </Badge>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    {req.reports && req.reports.length > 0 ? (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const reportFileUrl = req.reports?.[0]?.report_file;
-                                                                if (reportFileUrl) {
-                                                                    handleDownload(reportFileUrl);
-                                                                }
-                                                            }}
-                                                        >
-                                                            <DownloadCloud className="mr-2 h-4 w-4" /> Download
-                                                        </Button>
-                                                    ) : (
-                                                        <span className="text-sm text-muted-foreground">No report yet</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                        </form>
                     </div>
-
-                    <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>New Patient Lab Entry</DialogTitle>
-                            </DialogHeader>
-
-                            <form onSubmit={handleCreateRequest} className="space-y-4">
-                                <div>
-                                    <label className="text-sm font-medium">Patient</label>
-                                    <select
-                                        value={requestFormData.patient}
-                                        onChange={(e) => setRequestFormData({ ...requestFormData, patient: e.target.value })}
-                                        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                        required
-                                    >
-                                        <option value="">Select patient</option>
-                                        {patients.map((patient) => (
-                                            <option key={patient.id} value={patient.id}>
-                                                {patient.user_name || `Patient #${patient.id}`}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="text-sm font-medium">Referring Doctor</label>
-                                    <select
-                                        value={requestFormData.doctor}
-                                        onChange={(e) => setRequestFormData({ ...requestFormData, doctor: e.target.value })}
-                                        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                        required
-                                    >
-                                        <option value="">Select doctor</option>
-                                        {doctors.map((doctor) => (
-                                            <option key={doctor.id} value={doctor.id}>
-                                                Dr. {doctor.user_name || `Doctor #${doctor.id}`}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="text-sm font-medium">Test Type</label>
-                                    <select
-                                        value={requestFormData.test}
-                                        onChange={(e) => setRequestFormData({ ...requestFormData, test: e.target.value })}
-                                        className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                        required
-                                    >
-                                        <option value="">Select test</option>
-                                        {testTypes.map((testType) => (
-                                            <option key={testType.id} value={testType.id}>
-                                                {testType.test_name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="text-sm font-medium">Notes (Optional)</label>
-                                    <textarea
-                                        value={requestFormData.notes}
-                                        onChange={(e) => setRequestFormData({ ...requestFormData, notes: e.target.value })}
-                                        className="mt-1 w-full p-2 border rounded-md"
-                                        placeholder="Any notes for lab technician..."
-                                    />
-                                </div>
-
-                                <div className="flex gap-2 pt-2">
-                                    <Button type="submit" className="w-full">
-                                        <Plus className="mr-2 h-4 w-4" /> Create Entry
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="w-full"
-                                        onClick={() => setIsRequestDialogOpen(false)}
-                                    >
-                                        Cancel
-                                    </Button>
-                                </div>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
                 </TabsContent>
 
                 <TabsContent value="reports">

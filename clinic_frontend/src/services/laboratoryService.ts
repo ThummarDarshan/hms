@@ -76,7 +76,7 @@ export const laboratoryService = {
         return response.data;
     },
     updateTestType: async (id: number, data: Partial<LabTestType>) => {
-        const response = await api.put(`/laboratory/test-types/${id}/`, data);
+        const response = await api.patch(`/laboratory/test-types/${id}/`, data);
         return response.data;
     },
     deleteTestType: async (id: number) => {

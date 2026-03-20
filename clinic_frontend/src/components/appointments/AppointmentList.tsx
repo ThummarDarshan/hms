@@ -159,6 +159,8 @@ export const AppointmentList = () => {
     const classes: Record<string, string> = {
       PENDING: 'badge-pending',
       APPROVED: 'badge-approved',
+      VISITED: 'badge-visited',
+      REJECTED: 'badge-rejected',
       CANCELLED: 'badge-cancelled',
       COMPLETED: 'badge-approved',
     };

@@ -1,13 +1,14 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import LabTestType, LabRequest, LabReport
-from .serializers import LabTestTypeSerializer, LabRequestSerializer, LabReportSerializer
+from .models import LabTestCatalog, LabRequest, LabReport, LabEquipment
+from .serializers import LabTestCatalogSerializer, LabRequestSerializer, LabReportSerializer, LabEquipmentSerializer
 from django.db.models import Q
 from billing.models import Billing
 from decimal import Decimal
 import uuid
 
+# Permission classes
 class IsAdminUser(permissions.BasePermission):
     def has_permission(self, request, view):
         return bool(request.user and request.user.role == 'ADMIN')
@@ -21,15 +22,24 @@ class IsLabTechUser(permissions.BasePermission):
         return bool(request.user and request.user.role == 'LAB_TECHNICIAN')
 
 
-class LabTestTypeViewSet(viewsets.ModelViewSet):
-    queryset = LabTestType.objects.all().order_by('-created_at')
-    serializer_class = LabTestTypeSerializer
+class LabTestCatalogViewSet(viewsets.ModelViewSet):
+    queryset = LabTestCatalog.objects.all()
+    serializer_class = LabTestCatalogSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ['category']
+    search_fields = ['test_name', 'test_code']
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsAdminUser()]
         return super().get_permissions()
+
+class LabEquipmentViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = LabEquipment.objects.all()
+    serializer_class = LabEquipmentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ['status', 'location']
+    search_fields = ['equipment_name', 'model', 'serial_number']
 
 
 class LabRequestViewSet(viewsets.ModelViewSet):

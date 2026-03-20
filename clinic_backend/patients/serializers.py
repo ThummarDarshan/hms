@@ -10,7 +10,7 @@ class PatientSerializer(serializers.ModelSerializer):
     user_details = UserSerializer(source='user', read_only=True)
     user_name = serializers.CharField(source='user.full_name', read_only=True)
     user_email = serializers.CharField(source='user.email', read_only=True)
-    user_phone = serializers.CharField(source='user.phone', read_only=True)
+    user_phone = serializers.CharField(source='user.phone_number', read_only=True)
     contact_number = serializers.CharField(required=False, allow_blank=True, write_only=True)
     
     # Allow writing first_name and last_name from the Patient view

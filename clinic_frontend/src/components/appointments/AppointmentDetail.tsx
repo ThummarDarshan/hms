@@ -109,8 +109,9 @@ export const AppointmentDetail = () => {
         const classes: Record<string, string> = {
             PENDING: 'badge-pending',
             APPROVED: 'badge-approved',
+            VISITED: 'badge-visited',
+            REJECTED: 'badge-rejected',
             CANCELLED: 'badge-cancelled',
-            VISITED: 'bg-blue-100 text-blue-800 border-blue-200',
             COMPLETED: 'badge-approved',
         };
         return classes[status] || 'bg-muted text-muted-foreground';

@@ -50,8 +50,12 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         elif user.role in ['ADMIN', 'STAFF']:
             queryset = Appointment.objects.all()
         
-        # Optimize query
-        queryset = queryset.select_related('patient__user', 'doctor__user')
+        # Optimize query with all necessary relations
+        queryset = queryset.select_related(
+            'patient__user', 
+            'doctor__user',
+            'doctor__department'
+        ).order_by('-appointment_date', '-appointment_time')
 
         # Filter by patient_id if provided (for history)
         patient_id = self.request.query_params.get('patient_id')

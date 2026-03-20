@@ -25,7 +25,7 @@ export interface RegisterData {
   confirm_password: string;
   first_name: string;
   last_name: string;
-  phone: string;
+  phone_number?: string;
   role: string;
 }
 

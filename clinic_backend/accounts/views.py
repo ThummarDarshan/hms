@@ -39,7 +39,7 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter]
-    search_fields = ['first_name', 'last_name', 'email', 'phone']
+    search_fields = ['first_name', 'last_name', 'email', 'phone_number']
     
     def get_permissions(self):
         if self.action in ['register', 'login', 'forgot_password', 'verify_reset_token', 'reset_password']:
@@ -135,7 +135,7 @@ class UserViewSet(viewsets.ModelViewSet):
                     email=email,
                     first_name=data.get('first_name'),
                     last_name=data.get('last_name'),
-                    phone=data.get('phone', ''),
+                    phone_number=data.get('phone_number', data.get('phone', '')),
                     role='DOCTOR',
                     is_active=True
                 )
@@ -151,6 +151,10 @@ class UserViewSet(viewsets.ModelViewSet):
                     except Department.DoesNotExist:
                         pass
                 
+                license_num = data.get('license_number', '')
+                if Doctor.objects.filter(license_number=license_num).exists():
+                    return Response({'error': 'A doctor with this license number already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
                 Doctor.objects.create(
                     user=user,
                     department=department,
@@ -158,7 +162,7 @@ class UserViewSet(viewsets.ModelViewSet):
                     qualification=data.get('qualification', ''),
                     experience_years=data.get('experience_years', 0),
                     consultation_fee=data.get('consultation_fee', 0),
-                    license_number=data.get('license_number', ''),
+                    license_number=license_num,
                     bio=data.get('bio', ''),
                     created_by=request.user
                 )
@@ -167,9 +171,10 @@ class UserViewSet(viewsets.ModelViewSet):
                     'message': 'Doctor account created successfully',
                     'email': email
                 }, status=status.HTTP_201_CREATED)
-
+        except django.db.utils.IntegrityError as e:
+            return Response({'error': 'Database integrity error: ' + str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['get', 'patch'])
     def profile(self, request):

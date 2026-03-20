@@ -72,19 +72,17 @@ WSGI_APPLICATION = 'clinic_backend.wsgi.application'
 # Database - PostgreSQL Configuration
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DATABASE_NAME', default='neondb'),
-        'USER': config('DATABASE_USER', default='neondb_owner'),
-        'PASSWORD': config('DATABASE_PASSWORD', default='npg_cphIg2fi5BzV'),
-        'HOST': config('DATABASE_HOST', default='ep-purple-butterfly-a1a63t0r-pooler.ap-southeast-1.aws.neon.tech'),
-        'PORT': config('DATABASE_PORT', default='5432'),
+        'ENGINE': config('DB_ENGINE', default='django.db.backends.mysql'),
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default='127.0.0.1'),
+        'PORT': config('DB_PORT', default='3306'),
         'OPTIONS': {
-            'sslmode': 'require',
-            'connect_timeout': 10,
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         },
         'ATOMIC_REQUESTS': True,
         'CONN_MAX_AGE': 600,  # Connection pooling
-        'AUTOCOMMIT': True,
     }
 }
 

@@ -29,7 +29,7 @@ class WardSerializer(serializers.ModelSerializer):
     
     def validate_ward_type(self, value):
         """Validate ward type"""
-        valid_types = ['GENERAL', 'ICU', 'PRIVATE', 'SEMI_PRIVATE']
+        valid_types = ['GENERAL', 'ICU', 'PRIVATE', 'SEMI_PRIVATE', 'EMERGENCY', 'MATERNITY', 'PEDIATRIC']
         
         if value not in valid_types:
             raise serializers.ValidationError(
@@ -103,7 +103,7 @@ class BedAllocationSerializer(serializers.ModelSerializer):
     
     def validate_status(self, value):
         """Validate allocation status"""
-        valid_statuses = ['ACTIVE', 'DISCHARGED', 'CANCELLED']
+        valid_statuses = ['ACTIVE', 'DISCHARGED']
         
         if value not in valid_statuses:
             raise serializers.ValidationError(
@@ -114,7 +114,7 @@ class BedAllocationSerializer(serializers.ModelSerializer):
     
     def validate_payment_status(self, value):
         """Validate payment status"""
-        valid_statuses = ['PENDING', 'PAID', 'PARTIALLY_PAID', 'CANCELLED']
+        valid_statuses = ['PENDING', 'PAID']
         
         if value not in valid_statuses:
             raise serializers.ValidationError(
@@ -152,7 +152,7 @@ class BedSerializer(serializers.ModelSerializer):
     
     def validate_bed_type(self, value):
         """Validate bed type"""
-        valid_types = ['SINGLE', 'DOUBLE', 'ICU', 'GENERAL']
+        valid_types = ['STANDARD', 'ADJUSTABLE', 'ICU', 'VENTILATOR', 'PEDIATRIC']
         
         if value not in valid_types:
             raise serializers.ValidationError(
@@ -167,7 +167,7 @@ class BedSerializer(serializers.ModelSerializer):
     
     def validate_status(self, value):
         """Validate bed status"""
-        valid_statuses = ['AVAILABLE', 'OCCUPIED', 'UNDER_MAINTENANCE']
+        valid_statuses = ['AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'CLEANING']
         
         if value not in valid_statuses:
             raise serializers.ValidationError(

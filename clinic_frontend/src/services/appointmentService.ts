@@ -1,4 +1,5 @@
 import api from './api';
+import { apiCache } from './apiCache';
 
 export interface Appointment {
   id: number;
@@ -64,16 +65,19 @@ export const appointmentService = {
   },
 
   async approve(id: number): Promise<Appointment> {
+    apiCache.clear('appointments');
     const response = await api.post(`/appointments/${id}/approve/`);
     return response.data;
   },
 
   async reject(id: number, reason: string): Promise<Appointment> {
+    apiCache.clear('appointments');
     const response = await api.post(`/appointments/${id}/reject/`, { reason });
     return response.data;
   },
 
   async cancel(id: number): Promise<Appointment> {
+    apiCache.clear('appointments');
     const response = await api.post(`/appointments/${id}/cancel/`);
     return response.data;
   },

@@ -95,8 +95,17 @@ export const PatientForm = ({ initialData, onSuccess, onCancel }: PatientFormPro
       newErrors.emergency_contact = 'Emergency contact must be at least 5 characters';
     }
 
-    if (!formData.contact_number || formData.contact_number.trim().length < 5) {
-      newErrors.contact_number = 'Contact number is required and must be at least 5 characters';
+    // Contact/phone number requirements depend on context
+    if (initialData) {
+      // When editing existing patient, contact_number is required
+      if (!formData.contact_number || formData.contact_number.trim().length < 5) {
+        newErrors.contact_number = 'Contact number is required and must be at least 5 characters';
+      }
+    } else {
+      // When creating new patient/registering, phone is optional (can be added later)
+      if (formData.contact_number && formData.contact_number.trim().length > 0 && formData.contact_number.trim().length < 5) {
+        newErrors.contact_number = 'Contact number must be at least 5 characters if provided';
+      }
     }
 
     setErrors(newErrors);
@@ -119,19 +128,37 @@ export const PatientForm = ({ initialData, onSuccess, onCancel }: PatientFormPro
             confirm_password: formData.confirm_password,
             first_name: formData.first_name,
             last_name: formData.last_name,
-            phone: formData.contact_number,
-            role: ROLES.PATIENT,
-          };
+          } as any;
+          
+          // Only add phone_number if it's provided
+          if (formData.contact_number && formData.contact_number.trim()) {
+            newUserData.phone_number = formData.contact_number;
+          }
           const authResponse = await authService.register(newUserData);
           userId = authResponse.user.id;
         } catch (authError: any) {
           console.error('Registration error:', authError);
+          console.error('Response data:', authError.response?.data);
           const errorData = authError.response?.data;
           let authMsg = 'Failed to create user account.';
+          
           if (errorData) {
-            if (typeof errorData === 'string') authMsg = errorData;
-            else if (errorData.email) authMsg = `Email: ${errorData.email[0]}`;
-            else if (errorData.message) authMsg = errorData.message;
+            if (typeof errorData === 'string') {
+              authMsg = errorData;
+            } else if (typeof errorData === 'object') {
+              // Try to extract the first field error
+              for (const [key, value] of Object.entries(errorData)) {
+                if (Array.isArray(value) && value.length > 0) {
+                  authMsg = `${key}: ${value[0]}`;
+                  break;
+                } else if (typeof value === 'string') {
+                  authMsg = `${key}: ${value}`;
+                  break;
+                }
+              }
+            } else if (errorData.message) {
+              authMsg = errorData.message;
+            }
           }
           toast({
             variant: 'destructive',

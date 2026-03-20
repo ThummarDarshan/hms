@@ -1,10 +1,17 @@
 from django.contrib import admin
-from .models import LabTestType, LabRequest, LabReport
+from .models import LabTestCatalog, LabRequest, LabReport, LabEquipment
 
-@admin.register(LabTestType)
-class LabTestTypeAdmin(admin.ModelAdmin):
-    list_display = ('test_name', 'price', 'created_at')
-    search_fields = ('test_name',)
+@admin.register(LabTestCatalog)
+class LabTestCatalogAdmin(admin.ModelAdmin):
+    list_display = ('test_name', 'test_code', 'category', 'price', 'turnaround_time')
+    search_fields = ('test_name', 'test_code')
+    list_filter = ('category',)
+
+@admin.register(LabEquipment)
+class LabEquipmentAdmin(admin.ModelAdmin):
+    list_display = ('equipment_name', 'model', 'status', 'location')
+    search_fields = ('equipment_name', 'serial_number')
+    list_filter = ('status', 'location')
 
 @admin.register(LabRequest)
 class LabRequestAdmin(admin.ModelAdmin):
